@@ -11,7 +11,6 @@ router.use(authMiddleware);
 
 /**
  * GET /api/orders/reports/daily
- * Group orders by date YYYY-MM-DD with optional startDate and endDate filter
  */
 router.get('/reports/daily', async (req, res) => {
   try {
@@ -81,7 +80,7 @@ router.get('/reports/daily', async (req, res) => {
     console.error('Error fetching daily report:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to generate daily report.',
+      error: error.message || 'Failed to generate daily report.',
     });
   }
 });
@@ -188,14 +187,13 @@ router.get('/export/csv', async (req, res) => {
     console.error('Error generating CSV export:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to generate CSV export.',
+      error: error.message || 'Failed to generate CSV export.',
     });
   }
 });
 
 /**
  * GET /api/orders
- * Supports date filter (YYYY-MM-DD), status filter, search query
  */
 router.get('/', async (req, res) => {
   try {
@@ -295,7 +293,7 @@ router.get('/', async (req, res) => {
     console.error('Error fetching orders:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to retrieve orders.',
+      error: error.message || 'Failed to retrieve orders.',
     });
   }
 });
@@ -404,7 +402,7 @@ router.post('/', async (req, res) => {
     console.error('Error creating order:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to create order.',
+      error: error.message || 'Failed to create order.',
     });
   }
 });
@@ -491,7 +489,7 @@ router.put('/:id', async (req, res) => {
     console.error('Error updating order:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to update order.',
+      error: error.message || 'Failed to update order.',
     });
   }
 });
@@ -528,7 +526,7 @@ router.post('/:id/settle', async (req, res) => {
     console.error('Error settling payment:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to settle payment for order.',
+      error: error.message || 'Failed to settle payment for order.',
     });
   }
 });
@@ -558,7 +556,7 @@ router.delete('/:id', async (req, res) => {
     console.error('Error deleting order:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to delete order.',
+      error: error.message || 'Failed to delete order.',
     });
   }
 });
