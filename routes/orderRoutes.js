@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const connectDB = require('../config/db');
 const authMiddleware = require('../middleware/authMiddleware');
 
 let inMemoryOrders = [];
@@ -11,10 +12,10 @@ router.use(authMiddleware);
 
 /**
  * GET /api/orders/reports/daily
- * Group orders by date YYYY-MM-DD with optional startDate and endDate filter
  */
 router.get('/reports/daily', async (req, res) => {
   try {
+    await connectDB();
     const { startDate, endDate } = req.query;
     let filter = {};
 
@@ -90,6 +91,7 @@ router.get('/reports/daily', async (req, res) => {
  */
 router.get('/export/csv', async (req, res) => {
   try {
+    await connectDB();
     const { date, status, startDate, endDate } = req.query;
     let orders = [];
 
@@ -194,10 +196,10 @@ router.get('/export/csv', async (req, res) => {
 
 /**
  * GET /api/orders
- * Returns all active orders across all connected systems
  */
 router.get('/', async (req, res) => {
   try {
+    await connectDB();
     const { search, status, date } = req.query;
     let orders = [];
 
@@ -251,7 +253,6 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Filtered orders for summary math
     let totalOrders = orders.length;
     let pendingOrders = 0;
     let readyOrders = 0;
@@ -304,6 +305,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
+    await connectDB();
     const {
       customerName,
       phone,
@@ -413,6 +415,7 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
+    await connectDB();
     const orderId = req.params.id;
     const {
       customerName,
@@ -500,6 +503,7 @@ router.put('/:id', async (req, res) => {
  */
 router.post('/:id/settle', async (req, res) => {
   try {
+    await connectDB();
     const orderId = req.params.id;
     let order;
 
@@ -537,6 +541,7 @@ router.post('/:id/settle', async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
+    await connectDB();
     const orderId = req.params.id;
 
     if (isDbConnected()) {

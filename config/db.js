@@ -18,28 +18,34 @@ async function connectDB() {
     return null;
   }
 
-  if (cached.conn && mongoose.connection.readyState === 1) {
-    return cached.conn;
+  // If already connected, return connection immediately
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
   }
 
   if (!cached.promise) {
     const opts = {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     };
 
     cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
       console.log('MongoDB connected successfully to cloud database');
       return mongooseInstance;
+    }).catch((err) => {
+      cached.promise = null;
+      console.error('MongoDB Connection Error:', err.message);
+      throw err;
     });
   }
 
   try {
-    cached.conn = await cached.promise;
+    await cached.promise;
+    cached.conn = mongoose.connection;
   } catch (e) {
     cached.promise = null;
-    console.error('MongoDB connection error:', e.message);
+    console.error('Failed to resolve MongoDB connection:', e.message);
     throw e;
   }
 
