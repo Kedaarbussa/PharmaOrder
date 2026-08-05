@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const connectDB = require('../config/db');
@@ -23,7 +24,7 @@ app.use(async (req, res, next) => {
   try {
     await connectDB();
   } catch (error) {
-    console.warn('MongoDB connection fallback:', error.message);
+    console.warn('MongoDB connection warning:', error.message);
   }
   next();
 });
@@ -33,10 +34,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cron', cronRoutes);
 
-// Health Check API
+// Health Check API with DB Status
 app.get('/api/health', (req, res) => {
+  const isDbConnected = mongoose.connection && mongoose.connection.readyState === 1;
   return res.status(200).json({
     status: 'ok',
+    dbConnected: isDbConnected,
+    mode: isDbConnected ? 'MongoDB Cloud Database (Persistent)' : 'In-Memory Fallback (Temporary)',
     app: 'PharmaOrder API',
     timestamp: new Date().toISOString(),
   });
