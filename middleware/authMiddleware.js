@@ -13,19 +13,12 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      console.error('JWT_SECRET is missing in environment variables');
-      return res.status(500).json({
-        success: false,
-        error: 'Server authentication configuration error.',
-      });
-    }
-
+    const secret = process.env.JWT_SECRET || 'pharmaorder_local_fallback_secret_32_chars';
     const decoded = jwt.verify(token, secret);
-    req.user = decoded; // { id, googleId, email, name, picture }
+    req.user = decoded; // { id, username, email, name }
     next();
   } catch (err) {
+    console.error('JWT Token Verification Error:', err.message);
     return res.status(401).json({
       success: false,
       error: 'Invalid or expired authentication token. Please sign in again.',

@@ -5,17 +5,27 @@ const Order = require('../models/Order');
 const connectDB = require('../config/db');
 const authMiddleware = require('../middleware/authMiddleware');
 
-let inMemoryOrders = [];
-const isDbConnected = () => mongoose.connection && mongoose.connection.readyState === 1;
-
 router.use(authMiddleware);
+
+// Middleware to ensure DB connection is established for all order endpoints
+router.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in order router:', err.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Database connection failure. Please verify MongoDB Atlas connection.',
+    });
+  }
+});
 
 /**
  * GET /api/orders/reports/daily
  */
 router.get('/reports/daily', async (req, res) => {
   try {
-    await connectDB();
     const { startDate, endDate } = req.query;
     let filter = {};
 
@@ -33,19 +43,7 @@ router.get('/reports/daily', async (req, res) => {
       }
     }
 
-    let allOrders = [];
-    if (isDbConnected()) {
-      allOrders = await Order.find(filter).sort({ createdAt: -1 });
-    } else {
-      allOrders = [...inMemoryOrders];
-      if (startDate) {
-        allOrders = allOrders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) >= startDate);
-      }
-      if (endDate) {
-        allOrders = allOrders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) <= endDate);
-      }
-    }
-
+    const allOrders = await Order.find(filter).sort({ createdAt: -1 });
     const dailyMap = {};
 
     allOrders.forEach((order) => {
@@ -91,45 +89,31 @@ router.get('/reports/daily', async (req, res) => {
  */
 router.get('/export/csv', async (req, res) => {
   try {
-    await connectDB();
     const { date, status, startDate, endDate } = req.query;
-    let orders = [];
+    const filter = {};
 
-    if (isDbConnected()) {
-      const filter = {};
-      if (status && status !== 'All') filter.status = status;
-      if (date) {
-        const start = new Date(date);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(date);
-        end.setHours(23, 59, 59, 999);
-        filter.createdAt = { $gte: start, $lte: end };
-      } else if (startDate || endDate) {
-        filter.createdAt = {};
-        if (startDate) {
-          const s = new Date(startDate);
-          s.setHours(0, 0, 0, 0);
-          filter.createdAt.$gte = s;
-        }
-        if (endDate) {
-          const e = new Date(endDate);
-          e.setHours(23, 59, 59, 999);
-          filter.createdAt.$lte = e;
-        }
+    if (status && status !== 'All') filter.status = status;
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt = { $gte: start, $lte: end };
+    } else if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        const s = new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        filter.createdAt.$gte = s;
       }
-      orders = await Order.find(filter).sort({ createdAt: -1 });
-    } else {
-      orders = [...inMemoryOrders];
-      if (status && status !== 'All') {
-        orders = orders.filter((o) => o.status === status);
-      }
-      if (date) {
-        orders = orders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) === date);
-      } else {
-        if (startDate) orders = orders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) >= startDate);
-        if (endDate) orders = orders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) <= endDate);
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = e;
       }
     }
+
+    const orders = await Order.find(filter).sort({ createdAt: -1 });
 
     const headers = [
       'Order ID',
@@ -199,59 +183,33 @@ router.get('/export/csv', async (req, res) => {
  */
 router.get('/', async (req, res) => {
   try {
-    await connectDB();
     const { search, status, date } = req.query;
-    let orders = [];
+    const filter = {};
 
-    if (isDbConnected()) {
-      const filter = {};
-      if (status && status !== 'All') filter.status = status;
+    if (status && status !== 'All') filter.status = status;
 
-      if (date) {
-        const start = new Date(date);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(date);
-        end.setHours(23, 59, 59, 999);
-        filter.createdAt = { $gte: start, $lte: end };
-      }
-
-      if (search && search.trim() !== '') {
-        const searchRegex = new RegExp(search.trim(), 'i');
-        filter.$or = [
-          { customerName: searchRegex },
-          { phone: searchRegex },
-          { staffMember: searchRegex },
-          { medicineName: searchRegex },
-          { supplier: searchRegex },
-          { 'items.medicineName': searchRegex },
-          { 'items.supplier': searchRegex },
-        ];
-      }
-      orders = await Order.find(filter).sort({ createdAt: -1 });
-    } else {
-      orders = [...inMemoryOrders];
-      if (status && status !== 'All') {
-        orders = orders.filter((o) => o.status === status);
-      }
-      if (date) {
-        orders = orders.filter((o) => {
-          const dStr = new Date(o.createdAt).toISOString().slice(0, 10);
-          return dStr === date;
-        });
-      }
-      if (search && search.trim() !== '') {
-        const query = search.trim().toLowerCase();
-        orders = orders.filter(
-          (o) =>
-            (o.customerName && o.customerName.toLowerCase().includes(query)) ||
-            (o.phone && o.phone.toLowerCase().includes(query)) ||
-            (o.staffMember && o.staffMember.toLowerCase().includes(query)) ||
-            (o.items && o.items.some((i) => (i.medicineName && i.medicineName.toLowerCase().includes(query)) || (i.supplier && i.supplier.toLowerCase().includes(query)))) ||
-            (o.medicineName && o.medicineName.toLowerCase().includes(query)) ||
-            (o.supplier && o.supplier.toLowerCase().includes(query))
-        );
-      }
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt = { $gte: start, $lte: end };
     }
+
+    if (search && search.trim() !== '') {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { customerName: searchRegex },
+        { phone: searchRegex },
+        { staffMember: searchRegex },
+        { medicineName: searchRegex },
+        { supplier: searchRegex },
+        { 'items.medicineName': searchRegex },
+        { 'items.supplier': searchRegex },
+      ];
+    }
+
+    const orders = await Order.find(filter).sort({ createdAt: -1 });
 
     let totalOrders = orders.length;
     let pendingOrders = 0;
@@ -305,7 +263,6 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    await connectDB();
     const {
       customerName,
       phone,
@@ -354,47 +311,24 @@ router.post('/', async (req, res) => {
     const advance = advancePaid !== undefined && advancePaid !== '' && !isNaN(advancePaid) ? Number(advancePaid) : 0;
     const remaining = Math.max(0, total - advance);
 
-    let newOrder;
-    if (isDbConnected()) {
-      newOrder = new Order({
-        customerName,
-        phone,
-        staffMember,
-        items: itemsList,
-        medicineName: itemsList[0].medicineName,
-        quantity: itemsList[0].quantity,
-        supplier: itemsList[0].supplier,
-        totalPrice: total,
-        advancePaid: advance,
-        isSettled: remaining === 0 && total > 0,
-        status: status || 'Requested',
-        userId: req.user.id || 'admin',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await newOrder.save();
-    } else {
-      newOrder = {
-        _id: 'ord_' + Date.now(),
-        customerName,
-        phone,
-        staffMember,
-        items: itemsList,
-        medicineName: itemsList[0].medicineName,
-        quantity: itemsList[0].quantity,
-        supplier: itemsList[0].supplier,
-        totalPrice: total,
-        advancePaid: advance,
-        isSettled: remaining === 0 && total > 0,
-        remainingBalance: remaining,
-        status: status || 'Requested',
-        userId: req.user.id || 'admin',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        completedAt: status === 'Completed' ? new Date() : null,
-      };
-      inMemoryOrders.unshift(newOrder);
-    }
+    const newOrder = new Order({
+      customerName,
+      phone,
+      staffMember,
+      items: itemsList,
+      medicineName: itemsList[0].medicineName,
+      quantity: itemsList[0].quantity,
+      supplier: itemsList[0].supplier,
+      totalPrice: total,
+      advancePaid: advance,
+      isSettled: remaining === 0 && total > 0,
+      status: status || 'Requested',
+      userId: req.user.id || 'admin',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await newOrder.save();
 
     return res.status(201).json({
       success: true,
@@ -415,7 +349,6 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    await connectDB();
     const orderId = req.params.id;
     const {
       customerName,
@@ -427,62 +360,29 @@ router.put('/:id', async (req, res) => {
       status,
     } = req.body;
 
-    let order;
-    if (isDbConnected()) {
-      order = await Order.findById(orderId);
-      if (!order) {
-        return res.status(404).json({ success: false, error: 'Order not found.' });
-      }
-      if (customerName !== undefined) order.customerName = customerName;
-      if (phone !== undefined) order.phone = phone;
-      if (staffMember !== undefined) order.staffMember = staffMember;
-      if (Array.isArray(items) && items.length > 0) {
-        order.items = items.map((item) => ({
-          medicineName: String(item.medicineName).trim(),
-          quantity: Number(item.quantity) || 1,
-          supplier: String(item.supplier).trim(),
-        }));
-        order.medicineName = order.items[0].medicineName;
-        order.quantity = order.items[0].quantity;
-        order.supplier = order.items[0].supplier;
-      }
-      if (totalPrice !== undefined) order.totalPrice = totalPrice !== '' ? Number(totalPrice) : 0;
-      if (advancePaid !== undefined) order.advancePaid = advancePaid !== '' ? Number(advancePaid) : 0;
-      if (status !== undefined) order.status = status;
-      await order.save();
-    } else {
-      const idx = inMemoryOrders.findIndex((o) => String(o._id) === String(orderId));
-      if (idx === -1) {
-        return res.status(404).json({ success: false, error: 'Order not found.' });
-      }
-      order = inMemoryOrders[idx];
-      if (customerName !== undefined) order.customerName = customerName;
-      if (phone !== undefined) order.phone = phone;
-      if (staffMember !== undefined) order.staffMember = staffMember;
-      if (Array.isArray(items) && items.length > 0) {
-        order.items = items.map((item) => ({
-          medicineName: String(item.medicineName).trim(),
-          quantity: Number(item.quantity) || 1,
-          supplier: String(item.supplier).trim(),
-        }));
-        order.medicineName = order.items[0].medicineName;
-        order.quantity = order.items[0].quantity;
-        order.supplier = order.items[0].supplier;
-      }
-      if (totalPrice !== undefined) order.totalPrice = totalPrice !== '' ? Number(totalPrice) : 0;
-      if (advancePaid !== undefined) order.advancePaid = advancePaid !== '' ? Number(advancePaid) : 0;
-      if (status !== undefined) order.status = status;
-
-      if (!order.isSettled) {
-        order.remainingBalance = Math.max(0, (order.totalPrice || 0) - (order.advancePaid || 0));
-      }
-      order.updatedAt = new Date();
-      if (order.status === 'Completed') {
-        if (!order.completedAt) order.completedAt = new Date();
-      } else {
-        order.completedAt = null;
-      }
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, error: 'Order not found.' });
     }
+
+    if (customerName !== undefined) order.customerName = customerName;
+    if (phone !== undefined) order.phone = phone;
+    if (staffMember !== undefined) order.staffMember = staffMember;
+    if (Array.isArray(items) && items.length > 0) {
+      order.items = items.map((item) => ({
+        medicineName: String(item.medicineName).trim(),
+        quantity: Number(item.quantity) || 1,
+        supplier: String(item.supplier).trim(),
+      }));
+      order.medicineName = order.items[0].medicineName;
+      order.quantity = order.items[0].quantity;
+      order.supplier = order.items[0].supplier;
+    }
+    if (totalPrice !== undefined) order.totalPrice = totalPrice !== '' ? Number(totalPrice) : 0;
+    if (advancePaid !== undefined) order.advancePaid = advancePaid !== '' ? Number(advancePaid) : 0;
+    if (status !== undefined) order.status = status;
+
+    await order.save();
 
     return res.status(200).json({
       success: true,
@@ -503,24 +403,13 @@ router.put('/:id', async (req, res) => {
  */
 router.post('/:id/settle', async (req, res) => {
   try {
-    await connectDB();
     const orderId = req.params.id;
-    let order;
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
 
-    if (isDbConnected()) {
-      order = await Order.findById(orderId);
-      if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
-      order.isSettled = true;
-      order.remainingBalance = 0;
-      await order.save();
-    } else {
-      const idx = inMemoryOrders.findIndex((o) => String(o._id) === String(orderId));
-      if (idx === -1) return res.status(404).json({ success: false, error: 'Order not found.' });
-      order = inMemoryOrders[idx];
-      order.isSettled = true;
-      order.remainingBalance = 0;
-      order.updatedAt = new Date();
-    }
+    order.isSettled = true;
+    order.remainingBalance = 0;
+    await order.save();
 
     return res.status(200).json({
       success: true,
@@ -541,17 +430,9 @@ router.post('/:id/settle', async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
-    await connectDB();
     const orderId = req.params.id;
-
-    if (isDbConnected()) {
-      const order = await Order.findByIdAndDelete(orderId);
-      if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
-    } else {
-      const idx = inMemoryOrders.findIndex((o) => String(o._id) === String(orderId));
-      if (idx === -1) return res.status(404).json({ success: false, error: 'Order not found.' });
-      inMemoryOrders.splice(idx, 1);
-    }
+    const order = await Order.findByIdAndDelete(orderId);
+    if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
 
     return res.status(200).json({
       success: true,
