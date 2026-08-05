@@ -697,6 +697,19 @@ body {
   margin-top: 0.25rem;
 }
 
+.supplier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  background-color: var(--accent-blue-light);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  margin-top: 0.15rem;
+}
+
 /* Buttons */
 .btn {
   padding: 0.65rem 1.15rem;

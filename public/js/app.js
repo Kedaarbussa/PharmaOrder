@@ -741,16 +741,16 @@ const App = {
     let itemsHtml = '';
     if (Array.isArray(order.items) && order.items.length > 0) {
       itemsHtml = order.items.map((i) => `
-        <div style="margin-bottom:0.25rem;">
+        <div style="margin-bottom:0.35rem;">
           <span class="medicine-name">${this.escapeHtml(i.medicineName)} <span class="medicine-qty">(x${i.quantity})</span></span>
-          <span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-truck-field"></i> ${this.escapeHtml(i.supplier)}</span>
+          <div><span class="supplier-badge"><i class="fa-solid fa-truck-field"></i> Supplier: ${this.escapeHtml(i.supplier)}</span></div>
         </div>
       `).join('');
     } else {
       itemsHtml = `
-        <div style="margin-bottom:0.25rem;">
+        <div style="margin-bottom:0.35rem;">
           <span class="medicine-name">${this.escapeHtml(order.medicineName || 'N/A')} <span class="medicine-qty">(x${order.quantity || 1})</span></span>
-          <span style="font-size:0.75rem; color:var(--text-muted);"><i class="fa-solid fa-truck-field"></i> ${this.escapeHtml(order.supplier || 'N/A')}</span>
+          <div><span class="supplier-badge"><i class="fa-solid fa-truck-field"></i> Supplier: ${this.escapeHtml(order.supplier || 'N/A')}</span></div>
         </div>
       `;
     }
@@ -825,9 +825,9 @@ const App = {
 
     let itemsFormatted = '';
     if (Array.isArray(order.items) && order.items.length > 0) {
-      itemsFormatted = order.items.map((i) => `<strong>${this.escapeHtml(i.medicineName)}</strong> (x${i.quantity}) [${this.escapeHtml(i.supplier)}]`).join('<br>');
+      itemsFormatted = order.items.map((i) => `<strong>${this.escapeHtml(i.medicineName)}</strong> (x${i.quantity}) <br><span class="supplier-badge"><i class="fa-solid fa-truck-field"></i> Supplier: ${this.escapeHtml(i.supplier)}</span>`).join('<br><div style="margin-top:0.25rem;"></div>');
     } else {
-      itemsFormatted = `<strong>${this.escapeHtml(order.medicineName || 'N/A')}</strong> (x${order.quantity || 1}) [${this.escapeHtml(order.supplier || 'N/A')}]`;
+      itemsFormatted = `<strong>${this.escapeHtml(order.medicineName || 'N/A')}</strong> (x${order.quantity || 1}) <br><span class="supplier-badge"><i class="fa-solid fa-truck-field"></i> Supplier: ${this.escapeHtml(order.supplier || 'N/A')}</span>`;
     }
 
     return `
