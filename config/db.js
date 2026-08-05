@@ -11,12 +11,15 @@ if (!cached) {
 }
 
 async function connectDB() {
-  const uri = process.env.MONGODB_URI;
+  let uri = process.env.MONGODB_URI;
 
   if (!uri) {
     console.warn('MONGODB_URI environment variable is missing.');
     return null;
   }
+
+  // Trim accidental whitespace or trailing return characters
+  uri = uri.trim();
 
   // If already connected, return connection immediately
   if (mongoose.connection.readyState === 1) {

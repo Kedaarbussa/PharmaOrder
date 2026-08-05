@@ -24,6 +24,11 @@ const App = {
     this.setupEnterKeyNavigation();
     this.setupReadyModal();
     this.setupDailyReportModal();
+
+    // Auto-load orders on initial page load if token exists
+    if (typeof API !== 'undefined' && API.getToken()) {
+      this.loadOrders();
+    }
   },
 
   bindEvents() {
