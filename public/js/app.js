@@ -2,7 +2,7 @@
  * PharmaOrder Main SPA Application Engine
  * Manages Orders CRUD, Search/Filtering, Metrics (₹ INR), Modals, Inline Status Changing,
  * Enter Key Cell Navigation, Red 5s Ticker Bar, Ready Modal, Staff Tracking, Multi-Item Orders,
- * Date Filtering and Daily Orders & Advance Reports with Date Range Controls
+ * Date Filtering, Advance Payment Modes (Cash, Online, Card), and Daily Reports
  */
 const App = {
   orders: [],
@@ -166,9 +166,6 @@ const App = {
     });
   },
 
-  /**
-   * Set Quick Date Presets in Report Modal
-   */
   setReportDatePreset(preset) {
     const startInput = document.getElementById('reportStartDate');
     const endInput = document.getElementById('reportEndDate');
@@ -196,9 +193,6 @@ const App = {
     this.fetchAndRenderDailyReport();
   },
 
-  /**
-   * Dynamically add a medicine item row to the modal form
-   */
   addMedicineItemRow(medicineName = '', quantity = '', supplier = '') {
     const container = document.getElementById('itemsContainer');
     if (!container) return;
@@ -240,7 +234,6 @@ const App = {
 
     container.appendChild(row);
 
-    // Focus newly added medicine input
     setTimeout(() => {
       row.querySelector('.item-medicine')?.focus();
     }, 50);
@@ -251,7 +244,6 @@ const App = {
     const container = document.getElementById('itemsContainer');
     if (row && container && container.querySelectorAll('.medicine-item-row').length > 1) {
       row.remove();
-      // Renumber row titles
       container.querySelectorAll('.medicine-item-row').forEach((r, idx) => {
         const titleElem = r.querySelector('.item-row-header span');
         if (titleElem) titleElem.innerHTML = `<i class="fa-solid fa-pills"></i> Medicine #${idx + 1}`;
@@ -261,9 +253,6 @@ const App = {
     }
   },
 
-  /**
-   * Auto-learn and save new Staff Member or Supplier into DOM datalist
-   */
   autoSaveToDatalist(listId, val) {
     if (!val || !val.trim()) return;
     const cleanVal = val.trim();
@@ -278,9 +267,6 @@ const App = {
     }
   },
 
-  /**
-   * Enter Key Navigation: Pressing Enter moves to the immediate next cell in form
-   */
   setupEnterKeyNavigation() {
     const form = document.getElementById('orderForm');
     if (!form) return;
@@ -288,14 +274,12 @@ const App = {
     form.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const target = e.target;
-        // Don't intercept Enter on textareas, buttons, or submit
         if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.type === 'submit') {
           return;
         }
 
         e.preventDefault();
 
-        // Find all visible, enabled form inputs and selects in DOM order
         const formElements = Array.from(
           form.querySelectorAll('input:not([type="hidden"]), select')
         ).filter((el) => !el.disabled && el.offsetParent !== null);
@@ -308,7 +292,6 @@ const App = {
             nextElement.select();
           }
         } else {
-          // If on last field, submit form
           this.handleFormSubmit();
         }
       }
@@ -318,16 +301,18 @@ const App = {
   setupModalMath() {
     const totalPriceInput = document.getElementById('totalPrice');
     const advancePaidInput = document.getElementById('advancePaid');
+    const modeSelect = document.getElementById('advancePaymentMode');
     const advancePreviewElem = document.getElementById('advancePreview');
     const remainingPreviewElem = document.getElementById('remainingBalancePreview');
 
     const updatePreview = () => {
       const total = parseFloat(totalPriceInput.value) || 0;
       const advance = parseFloat(advancePaidInput.value) || 0;
+      const mode = modeSelect ? modeSelect.value : 'Cash';
       const remaining = Math.max(0, total - advance);
 
       if (advancePreviewElem) {
-        advancePreviewElem.textContent = `₹${advance.toFixed(2)}`;
+        advancePreviewElem.textContent = `₹${advance.toFixed(2)} (${mode})`;
       }
 
       if (remainingPreviewElem) {
@@ -342,6 +327,7 @@ const App = {
 
     if (totalPriceInput) totalPriceInput.addEventListener('input', updatePreview);
     if (advancePaidInput) advancePaidInput.addEventListener('input', updatePreview);
+    if (modeSelect) modeSelect.addEventListener('change', updatePreview);
   },
 
   setupReadyModal() {
@@ -399,15 +385,20 @@ const App = {
       advanceElem.textContent = `₹${(summary.advanceCollected || 0).toFixed(2)}`;
     }
 
+    const breakdownElem = document.getElementById('metricAdvanceBreakdown');
+    if (breakdownElem) {
+      const c = summary.cashAdvanceTotal || 0;
+      const o = summary.onlineAdvanceTotal || 0;
+      const cd = summary.cardAdvanceTotal || 0;
+      breakdownElem.textContent = `Cash: ₹${c.toFixed(0)} | Online: ₹${o.toFixed(0)} | Card: ₹${cd.toFixed(0)}`;
+    }
+
     const outstandingElem = document.getElementById('metricOutstanding');
     if (outstandingElem) {
       outstandingElem.textContent = `₹${(summary.outstandingPayments || 0).toFixed(2)}`;
     }
   },
 
-  /**
-   * Filter and process Ready for Pickup orders for 5s Red Ticker Bar and Header Badge
-   */
   processReadyOrders() {
     this.readyOrdersList = this.orders.filter((o) => o.status === 'Ready for Pickup');
 
@@ -433,9 +424,6 @@ const App = {
     }
   },
 
-  /**
-   * Rotate top Red Announcement Ticker every 5 seconds (5000ms)
-   */
   startTickerRotation() {
     if (this.tickerTimer) {
       clearInterval(this.tickerTimer);
@@ -516,12 +504,18 @@ const App = {
 
         let totalOrdersRange = 0;
         let totalAdvanceRange = 0;
+        let totalCashRange = 0;
+        let totalOnlineRange = 0;
+        let totalCardRange = 0;
         let totalPriceRange = 0;
         let totalBalanceRange = 0;
 
         reports.forEach((r) => {
           totalOrdersRange += r.orderCount;
           totalAdvanceRange += r.advanceCollected;
+          totalCashRange += r.cashAdvance || 0;
+          totalOnlineRange += r.onlineAdvance || 0;
+          totalCardRange += r.cardAdvance || 0;
           totalPriceRange += r.totalPrice;
           totalBalanceRange += r.remainingBalance;
         });
@@ -538,7 +532,12 @@ const App = {
             <tr>
               <td><strong style="color:var(--text-primary); font-size:0.95rem;">${formattedDate}</strong> <br><small style="color:var(--text-muted);">${r.date}</small></td>
               <td><span class="balance-badge settled" style="font-size:0.85rem;"><i class="fa-solid fa-box"></i> ${r.orderCount} Orders</span></td>
-              <td><strong style="color:var(--accent-blue); font-size:1rem;">₹${r.advanceCollected.toFixed(2)}</strong></td>
+              <td>
+                <strong style="color:var(--accent-blue); font-size:0.95rem;">₹${r.advanceCollected.toFixed(2)}</strong>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.15rem;">
+                  💵 Cash: ₹${(r.cashAdvance || 0).toFixed(0)} | 📱 Online: ₹${(r.onlineAdvance || 0).toFixed(0)} | 💳 Card: ₹${(r.cardAdvance || 0).toFixed(0)}
+                </div>
+              </td>
               <td><strong style="color:var(--text-primary); font-size:1rem;">₹${r.totalPrice.toFixed(2)}</strong></td>
               <td><strong style="color:${r.remainingBalance > 0 ? 'var(--accent-rose)' : 'var(--primary)'}; font-size:1rem;">${r.remainingBalance > 0 ? `₹${r.remainingBalance.toFixed(2)}` : 'Cleared'}</strong></td>
               <td class="text-right">
@@ -559,7 +558,8 @@ const App = {
             </div>
             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:0.75rem 1rem;">
               <small style="color:var(--text-muted); font-weight:700; text-transform:uppercase; font-size:0.7rem;">Total Advance</small>
-              <div style="font-size:1.4rem; font-weight:800; color:var(--accent-blue);">₹${totalAdvanceRange.toFixed(2)}</div>
+              <div style="font-size:1.3rem; font-weight:800; color:var(--accent-blue);">₹${totalAdvanceRange.toFixed(2)}</div>
+              <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Cash: ₹${totalCashRange.toFixed(0)} | Online: ₹${totalOnlineRange.toFixed(0)} | Card: ₹${totalCardRange.toFixed(0)}</div>
             </div>
             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:0.75rem 1rem;">
               <small style="color:var(--text-muted); font-weight:700; text-transform:uppercase; font-size:0.7rem;">Total Sales Value</small>
@@ -584,7 +584,7 @@ const App = {
                 <tr>
                   <th>Date</th>
                   <th>Orders Took</th>
-                  <th>Advance Collected (₹)</th>
+                  <th>Advance Breakdown (₹)</th>
                   <th>Total Sales Value (₹)</th>
                   <th>Remaining Due (₹)</th>
                   <th class="text-right">Actions</th>
@@ -713,9 +713,16 @@ const App = {
     }
   },
 
+  getPaymentModeIcon(mode) {
+    if (mode === 'Online') return '📱 Online';
+    if (mode === 'Card') return '💳 Card';
+    return '💵 Cash';
+  },
+
   renderTableRow(order) {
     const formattedPrice = order.totalPrice ? `₹${Number(order.totalPrice).toFixed(2)}` : '₹0.00';
     const formattedAdvance = order.advancePaid ? `₹${Number(order.advancePaid).toFixed(2)}` : '₹0.00';
+    const modeBadge = this.getPaymentModeIcon(order.advancePaymentMode || 'Cash');
     const remaining = order.remainingBalance || 0;
     const formattedBalance = `₹${remaining.toFixed(2)}`;
     const createdDate = new Date(order.createdAt).toLocaleDateString(undefined, {
@@ -763,7 +770,7 @@ const App = {
         <td>
           <div class="price-tag" style="font-size:0.95rem; font-weight:800;">${formattedPrice}</div>
           <div style="font-size:0.8rem; font-weight:700; color:var(--accent-blue); margin-top:0.15rem;">
-            <i class="fa-solid fa-wallet"></i> Advance: ${formattedAdvance}
+            <i class="fa-solid fa-wallet"></i> Advance: ${formattedAdvance} <span style="font-size:0.7rem; padding:0.1rem 0.35rem; background:var(--bg-hover); border-radius:4px; margin-left:0.2rem; color:var(--text-primary); border:1px solid var(--border-color);">${modeBadge}</span>
           </div>
           <div style="margin-top:0.25rem;">${balanceBadge}</div>
         </td>
@@ -810,6 +817,7 @@ const App = {
   renderMobileCard(order) {
     const formattedPrice = order.totalPrice ? `₹${Number(order.totalPrice).toFixed(2)}` : '₹0.00';
     const formattedAdvance = order.advancePaid ? `₹${Number(order.advancePaid).toFixed(2)}` : '₹0.00';
+    const modeBadge = this.getPaymentModeIcon(order.advancePaymentMode || 'Cash');
     const remaining = order.remainingBalance || 0;
     const formattedBalance = `₹${remaining.toFixed(2)}`;
     const statusClass = this.getStatusClass(order.status);
@@ -848,7 +856,7 @@ const App = {
           <div>
             <strong style="color:var(--text-muted); font-size:0.75rem; display:block;">PRICING (₹)</strong>
             <span style="font-weight:700;">Total: ${formattedPrice}</span>
-            <span style="display:block; font-size:0.75rem; font-weight:700; color:var(--accent-blue)">Adv: ${formattedAdvance}</span>
+            <span style="display:block; font-size:0.75rem; font-weight:700; color:var(--accent-blue)">Adv: ${formattedAdvance} (${modeBadge})</span>
             <span style="display:block; font-size:0.75rem; color:${!isCleared ? 'var(--accent-rose)' : 'var(--primary)'}">
               ${!isCleared ? `Due: ${formattedBalance}` : 'Cleared'}
             </span>
@@ -920,6 +928,7 @@ const App = {
         document.getElementById('staffMember').value = order.staffMember || '';
         document.getElementById('totalPrice').value = order.totalPrice !== undefined && order.totalPrice !== null && order.totalPrice > 0 ? Number(order.totalPrice).toFixed(2) : '';
         document.getElementById('advancePaid').value = order.advancePaid !== undefined && order.advancePaid !== null && order.advancePaid > 0 ? Number(order.advancePaid).toFixed(2) : '';
+        document.getElementById('advancePaymentMode').value = order.advancePaymentMode || 'Cash';
         document.getElementById('status').value = order.status || 'Requested';
 
         if (Array.isArray(order.items) && order.items.length > 0) {
@@ -937,23 +946,23 @@ const App = {
       document.getElementById('phone').value = '';
       document.getElementById('totalPrice').value = '';
       document.getElementById('advancePaid').value = '';
-      // Start with 1 empty item row
+      document.getElementById('advancePaymentMode').value = 'Cash';
       this.addMedicineItemRow();
     }
 
     const total = parseFloat(document.getElementById('totalPrice').value) || 0;
     const advance = parseFloat(document.getElementById('advancePaid').value) || 0;
+    const mode = document.getElementById('advancePaymentMode')?.value || 'Cash';
     const remaining = Math.max(0, total - advance);
 
     const advancePreviewElem = document.getElementById('advancePreview');
     const remainingPreviewElem = document.getElementById('remainingBalancePreview');
 
-    if (advancePreviewElem) advancePreviewElem.textContent = `₹${advance.toFixed(2)}`;
+    if (advancePreviewElem) advancePreviewElem.textContent = `₹${advance.toFixed(2)} (${mode})`;
     if (remainingPreviewElem) remainingPreviewElem.textContent = `₹${remaining.toFixed(2)}`;
 
     modal.classList.remove('hidden');
 
-    // Focus FIRST input field (Medicine Name) when modal opens
     setTimeout(() => {
       const firstMedInput = itemsContainer?.querySelector('.item-medicine');
       if (firstMedInput) {
@@ -975,9 +984,9 @@ const App = {
     const phone = document.getElementById('phone').value.trim();
     const rawPrice = document.getElementById('totalPrice').value;
     const rawAdvance = document.getElementById('advancePaid').value;
+    const advancePaymentMode = document.getElementById('advancePaymentMode').value;
     const status = document.getElementById('status').value;
 
-    // Read all medicine item rows
     const itemRows = Array.from(document.querySelectorAll('#itemsContainer .medicine-item-row'));
     const items = [];
 
@@ -1010,8 +1019,6 @@ const App = {
       }
 
       items.push({ medicineName: med, quantity: qty, supplier: sup });
-
-      // Auto-save new wholesale supplier to datalist
       this.autoSaveToDatalist('supplierList', sup);
     }
 
@@ -1025,7 +1032,6 @@ const App = {
       return;
     }
 
-    // Auto-save new staff member to datalist
     this.autoSaveToDatalist('staffList', staffMember);
 
     const orderData = {
@@ -1035,6 +1041,7 @@ const App = {
       items,
       totalPrice: rawPrice !== '' ? parseFloat(rawPrice) : 0,
       advancePaid: rawAdvance !== '' ? parseFloat(rawAdvance) : 0,
+      advancePaymentMode,
       status,
     };
 

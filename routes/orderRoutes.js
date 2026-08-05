@@ -58,13 +58,23 @@ router.get('/reports/daily', async (req, res) => {
           date: dateStr,
           orderCount: 0,
           advanceCollected: 0,
+          cashAdvance: 0,
+          onlineAdvance: 0,
+          cardAdvance: 0,
           totalPrice: 0,
           remainingBalance: 0,
         };
       }
 
+      const adv = Number(order.advancePaid) || 0;
+      const mode = order.advancePaymentMode || 'Cash';
+
       dailyMap[dateStr].orderCount += 1;
-      dailyMap[dateStr].advanceCollected += Number(order.advancePaid) || 0;
+      dailyMap[dateStr].advanceCollected += adv;
+      if (mode === 'Online') dailyMap[dateStr].onlineAdvance += adv;
+      else if (mode === 'Card') dailyMap[dateStr].cardAdvance += adv;
+      else dailyMap[dateStr].cashAdvance += adv;
+
       dailyMap[dateStr].totalPrice += Number(order.totalPrice) || 0;
       dailyMap[dateStr].remainingBalance += Number(order.remainingBalance) || 0;
     });
@@ -123,6 +133,7 @@ router.get('/export/csv', async (req, res) => {
       'Medicine Items & Suppliers',
       'Total Price (₹)',
       'Advance Paid (₹)',
+      'Advance Mode',
       'Remaining Balance (₹)',
       'Status',
       'Created At',
@@ -155,6 +166,7 @@ router.get('/export/csv', async (req, res) => {
         escapeCsvField(itemsSummary),
         escapeCsvField(order.totalPrice ? Number(order.totalPrice).toFixed(2) : '0.00'),
         escapeCsvField(order.advancePaid ? Number(order.advancePaid).toFixed(2) : '0.00'),
+        escapeCsvField(order.advancePaymentMode || 'Cash'),
         escapeCsvField(order.remainingBalance ? Number(order.remainingBalance).toFixed(2) : '0.00'),
         escapeCsvField(order.status),
         escapeCsvField(order.createdAt ? new Date(order.createdAt).toISOString() : ''),
@@ -216,6 +228,9 @@ router.get('/', async (req, res) => {
     let readyOrders = 0;
     let completedOrders = 0;
     let advanceCollected = 0;
+    let cashAdvanceTotal = 0;
+    let onlineAdvanceTotal = 0;
+    let cardAdvanceTotal = 0;
     let outstandingPayments = 0;
 
     orders.forEach((ord) => {
@@ -228,7 +243,12 @@ router.get('/', async (req, res) => {
       }
 
       if (ord.status !== 'Cancelled') {
-        advanceCollected += Number(ord.advancePaid) || 0;
+        const adv = Number(ord.advancePaid) || 0;
+        advanceCollected += adv;
+        const mode = ord.advancePaymentMode || 'Cash';
+        if (mode === 'Online') onlineAdvanceTotal += adv;
+        else if (mode === 'Card') cardAdvanceTotal += adv;
+        else cashAdvanceTotal += adv;
       }
 
       if (ord.remainingBalance > 0 && ord.status !== 'Cancelled') {
@@ -246,6 +266,9 @@ router.get('/', async (req, res) => {
         readyOrders,
         completedOrders,
         advanceCollected: parseFloat(advanceCollected.toFixed(2)),
+        cashAdvanceTotal: parseFloat(cashAdvanceTotal.toFixed(2)),
+        onlineAdvanceTotal: parseFloat(onlineAdvanceTotal.toFixed(2)),
+        cardAdvanceTotal: parseFloat(cardAdvanceTotal.toFixed(2)),
         outstandingPayments: parseFloat(outstandingPayments.toFixed(2)),
       },
     });
@@ -270,6 +293,7 @@ router.post('/', async (req, res) => {
       items,
       totalPrice,
       advancePaid,
+      advancePaymentMode,
       status,
       medicineName,
       quantity,
@@ -310,6 +334,7 @@ router.post('/', async (req, res) => {
     const total = totalPrice !== undefined && totalPrice !== '' && !isNaN(totalPrice) ? Number(totalPrice) : 0;
     const advance = advancePaid !== undefined && advancePaid !== '' && !isNaN(advancePaid) ? Number(advancePaid) : 0;
     const remaining = Math.max(0, total - advance);
+    const mode = ['Cash', 'Online', 'Card'].includes(advancePaymentMode) ? advancePaymentMode : 'Cash';
 
     const newOrder = new Order({
       customerName,
@@ -321,6 +346,7 @@ router.post('/', async (req, res) => {
       supplier: itemsList[0].supplier,
       totalPrice: total,
       advancePaid: advance,
+      advancePaymentMode: mode,
       isSettled: remaining === 0 && total > 0,
       status: status || 'Requested',
       userId: req.user.id || 'admin',
@@ -357,6 +383,7 @@ router.put('/:id', async (req, res) => {
       items,
       totalPrice,
       advancePaid,
+      advancePaymentMode,
       status,
     } = req.body;
 
@@ -380,6 +407,9 @@ router.put('/:id', async (req, res) => {
     }
     if (totalPrice !== undefined) order.totalPrice = totalPrice !== '' ? Number(totalPrice) : 0;
     if (advancePaid !== undefined) order.advancePaid = advancePaid !== '' ? Number(advancePaid) : 0;
+    if (advancePaymentMode !== undefined) {
+      order.advancePaymentMode = ['Cash', 'Online', 'Card'].includes(advancePaymentMode) ? advancePaymentMode : 'Cash';
+    }
     if (status !== undefined) order.status = status;
 
     await order.save();

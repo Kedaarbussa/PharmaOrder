@@ -229,7 +229,7 @@
             <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
           </div>
           <div class="metric-value" id="metricAdvance">₹0.00</div>
-          <div class="metric-footer">Total advance received</div>
+          <div class="metric-footer" id="metricAdvanceBreakdown">Cash: ₹0 | Online: ₹0 | Card: ₹0</div>
         </div>
 
         <div class="metric-card card-payment">
@@ -393,7 +393,7 @@
           <input type="text" id="staffMember" list="staffList" autocomplete="off" placeholder="Select or type staff name..." required>
         </div>
 
-        <!-- Pricing Row -->
+        <!-- 4. FOURTH: Pricing & Payment Mode Row -->
         <div class="form-row" style="margin-top: 0.5rem;">
           <div class="form-group">
             <label for="totalPrice">Total Price (₹)</label>
@@ -403,6 +403,15 @@
           <div class="form-group">
             <label for="advancePaid">Advance Paid (₹)</label>
             <input type="number" id="advancePaid" step="0.01" min="0" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="advancePaymentMode"><i class="fa-solid fa-money-bill-transfer"></i> Payment Mode</label>
+            <select id="advancePaymentMode" class="status-select" style="padding: 0.55rem 0.75rem;">
+              <option value="Cash">💵 Cash</option>
+              <option value="Online">📱 Online (UPI / QR)</option>
+              <option value="Card">💳 Card (Debit / Credit)</option>
+            </select>
           </div>
         </div>
 

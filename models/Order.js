@@ -9,6 +9,8 @@ const ORDER_STATUSES = [
   'Cancelled',
 ];
 
+const PAYMENT_MODES = ['Cash', 'Online', 'Card', 'N/A'];
+
 const itemSchema = new mongoose.Schema(
   {
     medicineName: {
@@ -77,6 +79,11 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, 'Advance paid cannot be negative'],
+    },
+    advancePaymentMode: {
+      type: String,
+      enum: PAYMENT_MODES,
+      default: 'Cash',
     },
     isSettled: {
       type: Boolean,
@@ -165,5 +172,6 @@ orderSchema.index(
 );
 
 orderSchema.statics.ORDER_STATUSES = ORDER_STATUSES;
+orderSchema.statics.PAYMENT_MODES = PAYMENT_MODES;
 
 module.exports = mongoose.models.Order || mongoose.model('Order', orderSchema);
