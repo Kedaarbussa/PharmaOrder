@@ -11,12 +11,12 @@ router.use(authMiddleware);
 
 /**
  * GET /api/orders/reports/daily
+ * Group orders by date YYYY-MM-DD with optional startDate and endDate filter
  */
 router.get('/reports/daily', async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-
-    let filter = { userId: req.user.id };
+    let filter = {};
 
     if (startDate || endDate) {
       filter.createdAt = {};
@@ -36,7 +36,7 @@ router.get('/reports/daily', async (req, res) => {
     if (isDbConnected()) {
       allOrders = await Order.find(filter).sort({ createdAt: -1 });
     } else {
-      allOrders = inMemoryOrders.filter((o) => String(o.userId) === String(req.user.id));
+      allOrders = [...inMemoryOrders];
       if (startDate) {
         allOrders = allOrders.filter((o) => new Date(o.createdAt).toISOString().slice(0, 10) >= startDate);
       }
@@ -91,10 +91,10 @@ router.get('/reports/daily', async (req, res) => {
 router.get('/export/csv', async (req, res) => {
   try {
     const { date, status, startDate, endDate } = req.query;
-    let orders;
+    let orders = [];
 
     if (isDbConnected()) {
-      const filter = { userId: req.user.id };
+      const filter = {};
       if (status && status !== 'All') filter.status = status;
       if (date) {
         const start = new Date(date);
@@ -117,7 +117,7 @@ router.get('/export/csv', async (req, res) => {
       }
       orders = await Order.find(filter).sort({ createdAt: -1 });
     } else {
-      orders = inMemoryOrders.filter((o) => String(o.userId) === String(req.user.id));
+      orders = [...inMemoryOrders];
       if (status && status !== 'All') {
         orders = orders.filter((o) => o.status === status);
       }
@@ -194,6 +194,7 @@ router.get('/export/csv', async (req, res) => {
 
 /**
  * GET /api/orders
+ * Returns all active orders across all connected systems
  */
 router.get('/', async (req, res) => {
   try {
@@ -201,7 +202,7 @@ router.get('/', async (req, res) => {
     let orders = [];
 
     if (isDbConnected()) {
-      const filter = { userId: req.user.id };
+      const filter = {};
       if (status && status !== 'All') filter.status = status;
 
       if (date) {
@@ -226,7 +227,7 @@ router.get('/', async (req, res) => {
       }
       orders = await Order.find(filter).sort({ createdAt: -1 });
     } else {
-      orders = inMemoryOrders.filter((o) => String(o.userId) === String(req.user.id));
+      orders = [...inMemoryOrders];
       if (status && status !== 'All') {
         orders = orders.filter((o) => o.status === status);
       }
@@ -365,7 +366,7 @@ router.post('/', async (req, res) => {
         advancePaid: advance,
         isSettled: remaining === 0 && total > 0,
         status: status || 'Requested',
-        userId: req.user.id,
+        userId: req.user.id || 'admin',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -385,7 +386,7 @@ router.post('/', async (req, res) => {
         isSettled: remaining === 0 && total > 0,
         remainingBalance: remaining,
         status: status || 'Requested',
-        userId: req.user.id,
+        userId: req.user.id || 'admin',
         createdAt: new Date(),
         updatedAt: new Date(),
         completedAt: status === 'Completed' ? new Date() : null,
@@ -425,7 +426,7 @@ router.put('/:id', async (req, res) => {
 
     let order;
     if (isDbConnected()) {
-      order = await Order.findOne({ _id: orderId, userId: req.user.id });
+      order = await Order.findById(orderId);
       if (!order) {
         return res.status(404).json({ success: false, error: 'Order not found.' });
       }
@@ -503,7 +504,7 @@ router.post('/:id/settle', async (req, res) => {
     let order;
 
     if (isDbConnected()) {
-      order = await Order.findOne({ _id: orderId, userId: req.user.id });
+      order = await Order.findById(orderId);
       if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
       order.isSettled = true;
       order.remainingBalance = 0;
@@ -539,7 +540,7 @@ router.delete('/:id', async (req, res) => {
     const orderId = req.params.id;
 
     if (isDbConnected()) {
-      const order = await Order.findOneAndDelete({ _id: orderId, userId: req.user.id });
+      const order = await Order.findByIdAndDelete(orderId);
       if (!order) return res.status(404).json({ success: false, error: 'Order not found.' });
     } else {
       const idx = inMemoryOrders.findIndex((o) => String(o._id) === String(orderId));
