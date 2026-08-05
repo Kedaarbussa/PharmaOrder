@@ -910,9 +910,9 @@ const App = {
       if (order) {
         modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Order`;
         document.getElementById('orderId').value = order._id;
-        document.getElementById('staffMember').value = order.staffMember || '';
         document.getElementById('customerName').value = order.customerName || '';
         document.getElementById('phone').value = order.phone || '';
+        document.getElementById('staffMember').value = order.staffMember || '';
         document.getElementById('totalPrice').value = order.totalPrice !== undefined && order.totalPrice !== null && order.totalPrice > 0 ? Number(order.totalPrice).toFixed(2) : '';
         document.getElementById('advancePaid').value = order.advancePaid !== undefined && order.advancePaid !== null && order.advancePaid > 0 ? Number(order.advancePaid).toFixed(2) : '';
         document.getElementById('status').value = order.status || 'Requested';
@@ -948,9 +948,14 @@ const App = {
 
     modal.classList.remove('hidden');
 
-    // Focus staff member or customer name when modal opens
+    // Focus FIRST input field (Medicine Name) when modal opens
     setTimeout(() => {
-      document.getElementById('staffMember')?.focus();
+      const firstMedInput = itemsContainer?.querySelector('.item-medicine');
+      if (firstMedInput) {
+        firstMedInput.focus();
+      } else {
+        document.getElementById('customerName')?.focus();
+      }
     }, 100);
   },
 
@@ -966,16 +971,6 @@ const App = {
     const rawPrice = document.getElementById('totalPrice').value;
     const rawAdvance = document.getElementById('advancePaid').value;
     const status = document.getElementById('status').value;
-
-    if (!staffMember) {
-      this.showToast('Staff Member placing the order is compulsory.', 'error');
-      return;
-    }
-
-    if (!customerName || !phone) {
-      this.showToast('Customer Name and Phone Number are compulsory.', 'error');
-      return;
-    }
 
     // Read all medicine item rows
     const itemRows = Array.from(document.querySelectorAll('#itemsContainer .medicine-item-row'));
@@ -1013,6 +1008,16 @@ const App = {
 
       // Auto-save new wholesale supplier to datalist
       this.autoSaveToDatalist('supplierList', sup);
+    }
+
+    if (!customerName || !phone) {
+      this.showToast('Customer Name and Phone Number are compulsory.', 'error');
+      return;
+    }
+
+    if (!staffMember) {
+      this.showToast('Staff Member placing the order is compulsory.', 'error');
+      return;
     }
 
     // Auto-save new staff member to datalist

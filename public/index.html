@@ -341,7 +341,7 @@
     </section>
   </main>
 
-  <!-- Create / Edit Order Modal -->
+  <!-- Create / Edit Order Modal (Reordered: 1. Medicine Items -> 2. Customer Info -> 3. Staff Member) -->
   <div id="orderModal" class="modal-backdrop hidden" tabindex="-1">
     <div class="modal-container" style="max-width: 680px;">
       <div class="modal-header">
@@ -354,38 +354,43 @@
       <form id="orderForm" class="modal-body" autocomplete="off" style="max-height: 80vh; overflow-y: auto;">
         <input type="hidden" id="orderId" value="">
 
-        <!-- Staff Member Selection -->
-        <div class="form-group" style="margin-bottom: 0.5rem;">
-          <label for="staffMember">Staff Member Placing Order <span class="required">*</span></label>
-          <input type="text" id="staffMember" list="staffList" autocomplete="off" placeholder="Select or type staff name..." required>
-        </div>
-
-        <!-- Customer Info -->
-        <div class="form-row">
-          <div class="form-group">
-            <label for="customerName">Customer Name <span class="required">*</span></label>
-            <input type="text" id="customerName" autocomplete="off" required>
-          </div>
-
-          <div class="form-group">
-            <label for="phone">Phone Number <span class="required">*</span></label>
-            <input type="tel" id="phone" autocomplete="off" required>
-          </div>
-        </div>
-
-        <!-- Section Header for Medicine Items -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin-top: 0.5rem;">
+        <!-- 1. FIRST: Section Header for Medicine Items & Suppliers -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin-bottom: 0.5rem;">
           <label style="font-size: 0.85rem; font-weight: 800; color: var(--primary);">
-            <i class="fa-solid fa-pills"></i> MEDICINE ITEMS & SUPPLIERS
+            <i class="fa-solid fa-pills"></i> MEDICINE ITEMS & SUPPLIERS <span class="required">*</span>
           </label>
           <button type="button" id="addItemBtn" class="btn btn-secondary btn-sm" style="color: var(--primary); border-color: var(--primary-border);">
             <i class="fa-solid fa-plus"></i> Add Item
           </button>
         </div>
 
-        <!-- Repeatable Dynamic Medicine Items Container -->
-        <div id="itemsContainer" class="items-container" style="display:flex; flex-direction:column; gap:0.75rem;">
+        <!-- Dynamic Medicine Items Container -->
+        <div id="itemsContainer" class="items-container" style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom: 1rem;">
           <!-- Dynamically populated via app.js -->
+        </div>
+
+        <!-- 2. SECOND: Customer Info -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem; margin-bottom: 0.75rem;">
+          <label style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-user"></i> Customer Details
+          </label>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="customerName">Customer Name <span class="required">*</span></label>
+              <input type="text" id="customerName" autocomplete="off" required>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone Number <span class="required">*</span></label>
+              <input type="tel" id="phone" autocomplete="off" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. THIRD: Staff Member Selection -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="staffMember">Staff Member Placing Order <span class="required">*</span></label>
+          <input type="text" id="staffMember" list="staffList" autocomplete="off" placeholder="Select or type staff name..." required>
         </div>
 
         <!-- Pricing Row -->
