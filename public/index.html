@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaOrder - Pharmacy Order & Payment Tracking System</title>
+  <meta name="description" content="Secure pharmacy order tracking system with Indian Rupee (₹) payment balance monitoring and automated order cleanup.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Pre-populated Datalist Options for Auto-Complete & Auto-Saving -->
+  <datalist id="staffList">
+    <option value="AYAAN">
+    <option value="BHASKAR">
+    <option value="B RAVINDER">
+    <option value="DILIP">
+    <option value="KRISHNA">
+    <option value="MALLESH">
+    <option value="RAMA">
+    <option value="RAMYA">
+    <option value="SAMEER">
+    <option value="SUDHARSHAN">
+  </datalist>
+
+  <datalist id="supplierList">
+    <option value="S P Medical Associates">
+    <option value="Shree Shyam Pharma">
+    <option value="Patwari Pharma">
+    <option value="JP Logistics">
+    <option value="Pashupati Medicals">
+    <option value="Shree Sharada (10 AM to 6 PM)">
+    <option value="Suman Agencies">
+    <option value="Jyoti Medical Hall">
+    <option value="A P Drugs - Adikmet">
+    <option value="Vishal Pharma">
+    <option value="Swathi Pharma">
+    <option value="Divya Pharma (Amberpet)">
+    <option value="Maruthi Agencies">
+    <option value="Sai Pharma (Narayanaguda)">
+    <option value="Vishal Agencies">
+  </datalist>
+
+  <!-- Top Red Announcement Bar for Ready for Pickup Orders (Rotates every 5s) -->
+  <div id="pickupTickerBar" class="pickup-ticker-bar hidden">
+    <div class="ticker-content-container">
+      <span class="ticker-alert-badge"><i class="fa-solid fa-bell fa-bounce"></i> READY FOR PICKUP</span>
+      <div id="tickerText" class="ticker-text">Loading ready orders...</div>
+      <button id="tickerViewBtn" class="ticker-view-btn"><i class="fa-solid fa-eye"></i> View All</button>
+    </div>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-prescription-bottle-medical"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">PharmaOrder</span>
+          <span class="brand-subtitle">Pharmacy Tracking System</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Quick Ready for Pickup Button -->
+        <button id="readyHeaderBtn" class="ready-header-btn hidden" title="View Orders Ready for Pickup">
+          <i class="fa-solid fa-store"></i>
+          <span>Ready Orders</span>
+          <span id="readyHeaderBadge" class="ready-header-badge">0</span>
+        </button>
+
+        <!-- Theme Toggle Button -->
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          <i class="fa-solid fa-moon moon-icon"></i>
+          <i class="fa-solid fa-sun sun-icon"></i>
+        </button>
+
+        <!-- Authenticated User Profile Menu -->
+        <div id="userProfile" class="user-profile hidden">
+          <img id="userAvatar" class="user-avatar" src="https://ui-avatars.com/api/?name=Pharmacy+Admin&background=059669&color=fff" alt="User Profile">
+          <div class="user-info">
+            <span id="userName" class="user-name">Pharmacy Admin</span>
+            <span id="userEmail" class="user-email">admin@pharmacy.com</span>
+          </div>
+
+          <!-- Change Password Header Button -->
+          <button id="openChangePasswordBtn" class="logout-btn" title="Change Password" style="border-color: var(--border-color);">
+            <i class="fa-solid fa-key"></i>
+            <span>Password</span>
+          </button>
+
+          <button id="logoutBtn" class="logout-btn" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-wrapper">
+    <!-- Unauthenticated Login Section -->
+    <section id="loginSection" class="login-section">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-badge">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Pharmacy Staff Portal</span>
+          </div>
+          <h1>Welcome to PharmaOrder</h1>
+          <p>Streamlined medicine order management, payment balance tracking in Indian Rupees (₹), and automated order cleanup.</p>
+        </div>
+
+        <div class="login-body">
+          <!-- Admin Login Form -->
+          <form id="localLoginForm" class="local-login-form" autocomplete="off">
+            <div class="form-group text-left" style="text-align: left; margin-bottom: 0.85rem;">
+              <label for="adminUser"><i class="fa-solid fa-user"></i> Username / Email</label>
+              <input type="text" id="adminUser" value="admin" autocomplete="off" required>
+            </div>
+            <div class="form-group text-left" style="text-align: left; margin-bottom: 1.25rem;">
+              <label for="adminPass"><i class="fa-solid fa-lock"></i> Password</label>
+              <input type="password" id="adminPass" value="admin123" autocomplete="off" required>
+            </div>
+            <button type="submit" id="adminLoginBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
+              <i class="fa-solid fa-right-to-bracket"></i> Sign In as Admin
+            </button>
+            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted);">
+              Default Credentials: Username: <strong>admin</strong> | Password: <strong>admin123</strong>
+            </div>
+          </form>
+          
+          <div id="loginLoading" class="login-loading hidden">
+            <div class="spinner"></div>
+            <span>Authenticating...</span>
+          </div>
+
+          <div id="authErrorMsg" class="auth-error-msg hidden"></div>
+        </div>
+
+        <div class="login-features">
+          <div class="feature-item">
+            <i class="fa-solid fa-indian-rupee-sign feature-icon"></i>
+            <div>
+              <strong>Indian Rupee (₹)</strong>
+              <p>Full INR currency support</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-calculator feature-icon"></i>
+            <div>
+              <strong>Balance Auto-Math</strong>
+              <p>Real-time remaining balance calculation</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-clock-rotate-left feature-icon"></i>
+            <div>
+              <strong>7-Day Auto Cleanup</strong>
+              <p>Completed orders auto-delete after 7 days</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-file-csv feature-icon"></i>
+            <div>
+              <strong>CSV Export</strong>
+              <p>One-click order history download</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Authenticated Dashboard View -->
+    <section id="dashboardSection" class="dashboard-section hidden">
+      <!-- Dashboard Summary Metrics Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card card-total">
+          <div class="metric-header">
+            <span class="metric-title">Total Orders</span>
+            <div class="metric-icon"><i class="fa-solid fa-box-archive"></i></div>
+          </div>
+          <div class="metric-value" id="metricTotal">0</div>
+          <div class="metric-footer">Active orders logged</div>
+        </div>
+
+        <div class="metric-card card-pending">
+          <div class="metric-header">
+            <span class="metric-title">Pending Orders</span>
+            <div class="metric-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+          </div>
+          <div class="metric-value" id="metricPending">0</div>
+          <div class="metric-footer">Requested / Wholesaler / Store</div>
+        </div>
+
+        <div class="metric-card card-ready" style="cursor: pointer;" onclick="App.openReadyModal()">
+          <div class="metric-header">
+            <span class="metric-title">Ready for Pickup</span>
+            <div class="metric-icon"><i class="fa-solid fa-store"></i></div>
+          </div>
+          <div class="metric-value" id="metricReady">0</div>
+          <div class="metric-footer">Click to view all ready orders</div>
+        </div>
+
+        <div class="metric-card card-completed">
+          <div class="metric-header">
+            <span class="metric-title">Completed Orders</span>
+            <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
+          </div>
+          <div class="metric-value" id="metricCompleted">0</div>
+          <div class="metric-footer">Auto-deletes after 7 days</div>
+        </div>
+
+        <div class="metric-card card-advance">
+          <div class="metric-header">
+            <span class="metric-title">Total Advance Collected</span>
+            <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
+          </div>
+          <div class="metric-value" id="metricAdvance">₹0.00</div>
+          <div class="metric-footer">Total advance received</div>
+        </div>
+
+        <div class="metric-card card-payment">
+          <div class="metric-header">
+            <span class="metric-title">Outstanding Payments</span>
+            <div class="metric-icon"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+          </div>
+          <div class="metric-value" id="metricOutstanding">₹0.00</div>
+          <div class="metric-footer">Total unpaid customer balance</div>
+        </div>
+      </div>
+
+      <!-- Toolbar: Search, Filters (Status & Date), Actions -->
+      <div class="toolbar-card">
+        <div class="toolbar-search">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="searchInput" placeholder="" autocomplete="off">
+          <button id="clearSearchBtn" class="clear-search-btn hidden" title="Clear search">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="toolbar-filters">
+          <!-- Date Filter Input -->
+          <div class="filter-group">
+            <label for="dateFilter"><i class="fa-solid fa-calendar-days"></i> Date:</label>
+            <div style="position:relative; display:inline-flex; align-items:center;">
+              <input type="date" id="dateFilter" class="status-select" title="Filter by Order Logged Date" style="padding-right: 2rem;">
+              <button id="clearDateBtn" class="clear-search-btn hidden" title="Clear Date Filter" style="right: 0.5rem;">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Status Filter Input -->
+          <div class="filter-group">
+            <label for="statusFilter"><i class="fa-solid fa-filter"></i> Status:</label>
+            <select id="statusFilter" class="status-select">
+              <option value="All">All Statuses</option>
+              <option value="Requested">Requested</option>
+              <option value="Ordered from Wholesaler">Ordered from Wholesaler</option>
+              <option value="Received at Store">Received at Store</option>
+              <option value="Ready for Pickup">Ready for Pickup</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <!-- Daily Report Modal Trigger -->
+          <button id="openDailyReportBtn" class="btn btn-secondary">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Daily Report</span>
+          </button>
+
+          <button id="exportCsvBtn" class="btn btn-secondary">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Export CSV</span>
+          </button>
+
+          <button id="openCreateModalBtn" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Order</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Orders Content Table / Mobile Cards -->
+      <div class="content-card">
+        <!-- Loading Spinner -->
+        <div id="tableLoading" class="table-loading hidden">
+          <div class="spinner"></div>
+          <span>Loading orders data...</span>
+        </div>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <h3>No Orders Found</h3>
+          <p id="emptyStateText">No orders match your current search, date, or filter criteria.</p>
+          <button id="emptyCreateBtn" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Create First Order
+          </button>
+        </div>
+
+        <!-- Responsive Table (Desktop View) -->
+        <div class="table-responsive">
+          <table class="orders-table" id="ordersTable">
+            <thead>
+              <tr>
+                <th>Customer & Staff</th>
+                <th>Medicine Items & Suppliers</th>
+                <th>Pricing & Payments (₹)</th>
+                <th>Status</th>
+                <th>Date Logged</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+              <!-- Dynamically rendered via app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards Container (Mobile View) -->
+        <div id="mobileCardsGrid" class="mobile-cards-grid">
+          <!-- Dynamically rendered via app.js -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Create / Edit Order Modal -->
+  <div id="orderModal" class="modal-backdrop hidden" tabindex="-1">
+    <div class="modal-container" style="max-width: 680px;">
+      <div class="modal-header">
+        <h2 id="modalTitle"><i class="fa-solid fa-prescription"></i> Create New Order</h2>
+        <button id="closeOrderModalBtn" class="modal-close-btn" aria-label="Close Modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="orderForm" class="modal-body" autocomplete="off" style="max-height: 80vh; overflow-y: auto;">
+        <input type="hidden" id="orderId" value="">
+
+        <!-- Staff Member Selection -->
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label for="staffMember">Staff Member Placing Order <span class="required">*</span></label>
+          <input type="text" id="staffMember" list="staffList" autocomplete="off" placeholder="Select or type staff name..." required>
+        </div>
+
+        <!-- Customer Info -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="customerName">Customer Name <span class="required">*</span></label>
+            <input type="text" id="customerName" autocomplete="off" required>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number <span class="required">*</span></label>
+            <input type="tel" id="phone" autocomplete="off" required>
+          </div>
+        </div>
+
+        <!-- Section Header for Medicine Items -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin-top: 0.5rem;">
+          <label style="font-size: 0.85rem; font-weight: 800; color: var(--primary);">
+            <i class="fa-solid fa-pills"></i> MEDICINE ITEMS & SUPPLIERS
+          </label>
+          <button type="button" id="addItemBtn" class="btn btn-secondary btn-sm" style="color: var(--primary); border-color: var(--primary-border);">
+            <i class="fa-solid fa-plus"></i> Add Item
+          </button>
+        </div>
+
+        <!-- Repeatable Dynamic Medicine Items Container -->
+        <div id="itemsContainer" class="items-container" style="display:flex; flex-direction:column; gap:0.75rem;">
+          <!-- Dynamically populated via app.js -->
+        </div>
+
+        <!-- Pricing Row -->
+        <div class="form-row" style="margin-top: 0.5rem;">
+          <div class="form-group">
+            <label for="totalPrice">Total Price (₹)</label>
+            <input type="number" id="totalPrice" step="0.01" min="0" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="advancePaid">Advance Paid (₹)</label>
+            <input type="number" id="advancePaid" step="0.01" min="0" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Calculated Remaining Balance Preview in ₹ -->
+        <div class="balance-preview-box">
+          <div>
+            <div class="balance-label">Advance Received:</div>
+            <div id="advancePreview" class="balance-amount" style="color: var(--accent-blue);">₹0.00</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="balance-label">Remaining Balance Due:</div>
+            <div id="remainingBalancePreview" class="balance-amount">₹0.00</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="status">Order Status <span class="required">*</span></label>
+          <select id="status" class="status-select">
+            <option value="Requested">Requested</option>
+            <option value="Ordered from Wholesaler">Ordered from Wholesaler</option>
+            <option value="Received at Store">Received at Store</option>
+            <option value="Ready for Pickup">Ready for Pickup</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="cancelOrderModalBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="saveOrderBtn" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save Order
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dedicated Daily Sales & Advance Report Modal with Date Range Filter -->
+  <div id="dailyReportModal" class="modal-backdrop hidden" tabindex="-1">
+    <div class="modal-container" style="max-width: 880px;">
+      <div class="modal-header" style="background-color: var(--accent-blue-light);">
+        <h2 style="color: var(--accent-blue);"><i class="fa-solid fa-chart-line"></i> Daily Orders & Advance Collection Report</h2>
+        <button id="closeDailyReportModalBtn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Report Modal Filter Toolbar -->
+      <div style="padding: 1rem 1.25rem 0.5rem 1.25rem; background-color: var(--bg-hover); border-bottom: 1px solid var(--border-color); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <div class="filter-group">
+            <label for="reportStartDate" style="font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-calendar"></i> From:</label>
+            <input type="date" id="reportStartDate" class="status-select" style="padding: 0.35rem 0.6rem; font-size: 0.825rem;">
+          </div>
+          <div class="filter-group">
+            <label for="reportEndDate" style="font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-calendar"></i> To:</label>
+            <input type="date" id="reportEndDate" class="status-select" style="padding: 0.35rem 0.6rem; font-size: 0.825rem;">
+          </div>
+          <button id="applyReportDateFilterBtn" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-filter"></i> Apply Filter
+          </button>
+          <button id="resetReportDateFilterBtn" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.4rem;">
+          <button class="btn btn-secondary btn-sm" onclick="App.setReportDatePreset('today')">Today</button>
+          <button class="btn btn-secondary btn-sm" onclick="App.setReportDatePreset('month')">This Month</button>
+          <button class="btn btn-secondary btn-sm" onclick="App.setReportDatePreset('all')">All Time</button>
+        </div>
+      </div>
+
+      <div class="modal-body" style="max-height: 65vh; overflow-y: auto; padding: 1.25rem;">
+        <div id="dailyReportContent">
+          <!-- Dynamically populated via app.js -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="closeDailyReportFooterBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Ready for Pickup Orders Modal -->
+  <div id="readyOrdersModal" class="modal-backdrop hidden" tabindex="-1">
+    <div class="modal-container" style="max-width: 800px;">
+      <div class="modal-header" style="background-color: var(--accent-purple-light);">
+        <h2 style="color: var(--accent-purple);"><i class="fa-solid fa-store"></i> Orders Ready for Customer Collection</h2>
+        <button id="closeReadyModalBtn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.25rem;">
+        <div id="readyModalList" class="ready-modal-list">
+          <!-- Dynamically populated via app.js -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="closeReadyModalFooterBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="modal-backdrop hidden" tabindex="-1">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key"></i> Change Admin Password</h3>
+        <button id="closeChangePasswordBtn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="changePasswordForm" class="modal-body" autocomplete="off">
+        <div class="form-group">
+          <label for="currentPass">Current Password <span class="required">*</span></label>
+          <input type="password" id="currentPass" autocomplete="off" required>
+        </div>
+
+        <div class="form-group">
+          <label for="newPass">New Password <span class="required">*</span></label>
+          <input type="password" id="newPass" autocomplete="off" required minlength="4">
+        </div>
+
+        <div class="form-group">
+          <label for="confirmNewPass">Confirm New Password <span class="required">*</span></label>
+          <input type="password" id="confirmNewPass" autocomplete="off" required minlength="4">
+        </div>
+
+        <div id="passwordErrorMsg" class="auth-error-msg hidden" style="margin-top: 0;"></div>
+
+        <div class="modal-footer" style="padding: 1rem 0 0 0;">
+          <button type="button" id="cancelChangePasswordBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="savePasswordBtn" class="btn btn-primary">
+            <i class="fa-solid fa-shield-check"></i> Update Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation Dialog Modal -->
+  <div id="confirmModal" class="modal-backdrop hidden" tabindex="-1">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Confirm Action</h3>
+        <button id="closeConfirmModalBtn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">Are you sure you want to proceed with this action?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirmCancelBtn" class="btn btn-secondary">Cancel</button>
+        <button id="confirmProceedBtn" class="btn btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Logic Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
